@@ -19,11 +19,6 @@ def get_data(prices, fundamentals):
     for symbol in symbols:
 
         stock = df[df.symbol == symbol].copy()
-        data = stock.values 
-        num_days = len(data)
-        if num_days != 1762:
-            continue 
-
         stock.drop(['symbol'], 1, inplace=True)
 
         min_max_scaler = preprocessing.MinMaxScaler()
@@ -32,19 +27,24 @@ def get_data(prices, fundamentals):
         stock['low'] = min_max_scaler.fit_transform(stock.low.values.reshape(-1, 1))
         stock['volume'] = min_max_scaler.fit_transform(stock.volume.values.reshape(-1, 1))
         stock['close'] = min_max_scaler.fit_transform(stock.close.values.reshape(-1, 1))
-        
+        data = stock.values 
+        num_days = len(data)
+        if num_days != 1762:
+            continue 
         num_features = 5
-        window = 20 
+        window = 21
         new_data = []
-        
+     
         for i in range(num_days - window): 
             new_data.append(data[i:i + window]) 
-
+    
         new_data = np.array(new_data)
         limit = round(num_days * 0.9)
-
+        
         train_input.append(new_data[:limit, :][:, :-1])
         train_labels.append(new_data[:limit, :][:, -1][:, -1])
+
+        
         test_input.append(new_data[limit:, :][:, :-1])
         test_labels.append(new_data[limit:, :][:, -1][:, -1])
 
