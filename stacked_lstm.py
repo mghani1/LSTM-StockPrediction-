@@ -3,8 +3,6 @@ import numpy as np
 from preprocess import get_data
 import math
 
-from sklearn.ensemble import RandomForestRegressor
-
 class ModelThree(tf.keras.Model):
 
     def __init__(self):
