@@ -3,6 +3,16 @@ import numpy as np
 from preprocess import get_data
 import math
 
+from sklearn.ensemble import RandomForestRegressor
+
+class ModelThree(tf.keras.Model):
+
+    def __init__(self):
+
+        super(ModelThree, self).__init__()
+
+        self.rf = RandomForestRegressor(n_estimators=100)
+
 class ModelOne(tf.keras.Model):
 
     def __init__(self):
@@ -68,19 +78,17 @@ class ModelTwo(tf.keras.Model):
 
 def train(model_one, model_two, train_input, train_labels):
     
+    counter = 0
+    total_loss_one = 0
+    total_loss_two = 0
     num_inputs = np.shape(train_labels)[0]
     num_days = np.shape(train_labels)[1]
     num_batches = num_days - num_days % model_one.batch_size
-    counter = 0
     for i, stock in enumerate(train_input):
-
-        loss_one_sum = 0
-        loss_two_sum = 0
         count = 0
-
         pointer = 0 
         while pointer < num_batches:
-            count += 1
+            counter += 1
             start = pointer
             pointer += model_one.batch_size
             batch_inputs = stock[start:pointer, :, :]
@@ -100,56 +108,51 @@ def train(model_one, model_two, train_input, train_labels):
                     logits_two = model_two.call(predictions)
                     loss_two = model_two.loss_function(logits_two, labels_two)
         
-            loss_one_sum += loss_one
-            loss_two_sum += loss_two
+            total_loss_one += loss_one
+            total_loss_two += loss_two
             gradients_one = tape_one.gradient(loss_one, model_one.trainable_variables)
             model_one.optimizer.apply_gradients(zip(gradients_one, model_one.trainable_variables))
             gradients_two = tape_two.gradient(loss_two, model_two.trainable_variables)
             model_two.optimizer.apply_gradients(zip(gradients_two, model_two.trainable_variables))
+        print("I'm working.")
 
-        avg_loss_one = loss_one_sum / count 
-        avg_loss_two = loss_two_sum / count 
-
-        print('loss_one', avg_loss_one.numpy())
-        print('loss_two', avg_loss_two.numpy())
-
+    print('training loss one avg:', total_loss_one/counter)
+    print('training loss two avg:', total_loss_two/counter)
     return 
                
 
 def test(model_one, model_two, test_input, test_labels):
 
-    loss_one_sum = 0
-    loss_two_sum = 0
-    count = 0
-
+    counter = 0
+    total_loss_one = 0
+    total_loss_two = 0
     num_inputs = np.shape(test_labels)[0]
     num_days = np.shape(test_labels)[1]
     num_batches = num_days - num_days % model_one.batch_size
-    counter = 0
     for i, stock in enumerate(test_input):
+        count = 0
         pointer = 0 
         while pointer < num_batches:
-            count += 1
+            counter += 1
             start = pointer
             pointer += model_one.batch_size
             batch_inputs = stock[start:pointer, :, :]
             batch_labels = test_labels[i, start:pointer]
             logits_one = model_one.call(batch_inputs)
             loss_one = model_one.loss_function(logits_one, batch_labels) 
-        
+            # make new dataset of predictions and real labels 
             batch_labels = np.reshape(batch_labels,(100, -1))
             new_data = np.hstack((logits_one, batch_labels)) # shape = (100, 2)
             predictions = []
             for j in range(model_two.batch_size - model_two.window_size): 
                 predictions.append(new_data[j:j + model_two.window_size]) 
             predictions = np.array(predictions) # shape = (91, 9, 2) 
-            new_labels = batch_labels[model_two.window_size:] # shape = (91, 1)
-            new_logits = model_two.call(predictions)
-            loss_two = model_two.loss_function(new_logits, new_labels)
-            loss_one_sum += loss_one
-            loss_two_sum += loss_two
-
-    return loss_one_sum/count, loss_two_sum/count 
+            labels_two = batch_labels[model_two.window_size:] # shape = (91, 1)
+            logits_two = model_two.call(predictions)
+            loss_two = model_two.loss_function(logits_two, labels_two)
+            total_loss_one += loss_one
+            total_loss_two += loss_two
+    return total_loss_one/counter, total_loss_two/counter
 
 def main():
     
@@ -158,7 +161,8 @@ def main():
     model_two = ModelTwo()
     train(model_one, model_two, train_input, train_labels)
     avg_loss_one, avg_loss_two = test(model_one, test_input, test_labels)
-
+    print('testing loss one avg:', avg_loss_one.numpy())
+    print('testing loss two avg:', avg_loss_two.numpy())
     
 if __name__ == '__main__':
     main()
