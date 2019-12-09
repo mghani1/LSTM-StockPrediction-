@@ -4,11 +4,9 @@ Stock Prediction Using Reactionary Recurrent Neural Network
 
 Results:
 
-normal training loss one: 0.00872524
-stackde training loss: 0.0051617934
+normal training loss one: 0.00872524 stacked training loss: 0.0051617934
 
-normal testing loss: 0.0065551633
-stacked testing loss: 0.0006514265
+normal testing loss: 0.0065551633 stacked testing loss: 0.0006514265
 
 Contributors: Mustafa Ghani (mghani1), Rahul Dey (rdey2)
 
