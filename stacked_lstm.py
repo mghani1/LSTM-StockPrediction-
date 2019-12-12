@@ -4,12 +4,6 @@ from preprocess import get_data
 import math
 import matplotlib.pyplot as plt
 
-class ModelThree(tf.keras.Model):
-
-    def __init__(self):
-
-        super(ModelThree, self).__init__()
-
 class ModelOne(tf.keras.Model):
 
     def __init__(self):
