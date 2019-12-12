@@ -2,6 +2,9 @@ import tensorflow as tf
 import numpy as np
 from preprocess import get_data
 import math
+import matplotlib.pyplot as plt
+
+from sklearn.ensemble import RandomForestRegressor
 
 class ModelThree(tf.keras.Model):
 
@@ -76,6 +79,9 @@ class ModelTwo(tf.keras.Model):
 
 def train(model_one, model_two, train_input, train_labels):
     
+    train_loss_one = []
+    train_loss_two = []
+
     counter = 0
     total_loss_one = 0
     total_loss_two = 0
@@ -85,7 +91,10 @@ def train(model_one, model_two, train_input, train_labels):
     for i, stock in enumerate(train_input):
         count = 0
         pointer = 0 
+        loss_one_sum = 0
+        loss_two_sum = 0
         while pointer < num_batches:
+            count += 1
             counter += 1
             start = pointer
             pointer += model_one.batch_size
@@ -105,22 +114,36 @@ def train(model_one, model_two, train_input, train_labels):
                     labels_two = batch_labels[model_two.window_size:] # shape = (91, 1)
                     logits_two = model_two.call(predictions)
                     loss_two = model_two.loss_function(logits_two, labels_two)
-        
+
+            loss_one_sum += loss_one
+            loss_two_sum += loss_two
             total_loss_one += loss_one
             total_loss_two += loss_two
+
             gradients_one = tape_one.gradient(loss_one, model_one.trainable_variables)
             model_one.optimizer.apply_gradients(zip(gradients_one, model_one.trainable_variables))
             gradients_two = tape_two.gradient(loss_two, model_two.trainable_variables)
             model_two.optimizer.apply_gradients(zip(gradients_two, model_two.trainable_variables))
-        print("I'm working.")
+
+        if i % 20 == 0:
+            train_loss_one.append((total_loss_one/counter).numpy())
+            train_loss_two.append((total_loss_two/counter).numpy())
+        
+        # avg_loss_one = loss_one_sum/count
+        # avg_loss_two = loss_two_sum/count
+        # print('loss one', avg_loss_one.numpy())
+        # print('loss two', avg_loss_two.numpy())
 
     print('training loss one avg:', total_loss_one/counter)
     print('training loss two avg:', total_loss_two/counter)
-    return 
+    return train_loss_one, train_loss_two
                
 
 def test(model_one, model_two, test_input, test_labels):
 
+    test_loss_one = []
+    test_loss_two = []
+    
     counter = 0
     total_loss_one = 0
     total_loss_two = 0
@@ -150,17 +173,39 @@ def test(model_one, model_two, test_input, test_labels):
             loss_two = model_two.loss_function(logits_two, labels_two)
             total_loss_one += loss_one
             total_loss_two += loss_two
-    return total_loss_one/counter, total_loss_two/counter
+        if i % 20 == 0:
+            test_loss_one.append((total_loss_one/counter).numpy())
+            test_loss_two.append((total_loss_two/counter).numpy())
+
+    return test_loss_one, test_loss_two, total_loss_one/counter, total_loss_two/counter
+
+def visualize_results(tr1, tr2, ts1, ts2):
+    epoch_count = range(1, len(tr1) + 1)
+    plt.plot(epoch_count, tr1, 'r-')
+    plt.plot(epoch_count, ts1, 'b--')
+    plt.plot(epoch_count, tr2, 'g-')
+    plt.plot(epoch_count, ts2, 'p--')
+    plt.legend(['Training Loss One', 'Test Loss One', 'Training Loss Two', 'Test Loss Two'])
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.show()
 
 def main():
     
     train_input, train_labels, test_input, test_labels = get_data("./data/prices.csv", "./data/fundamentals.csv")
     model_one = ModelOne()
     model_two = ModelTwo()
-    train(model_one, model_two, train_input, train_labels)
-    avg_loss_one, avg_loss_two = test(model_one, test_input, test_labels)
+    # num_epochs = 7
+
+    # for _ in range(num_epochs):
+    tr1, tr2 = train(model_one, model_two, train_input, train_labels)
+    ts1, ts2, avg_loss_one, avg_loss_two = test(model_one, model_two, test_input, test_labels)
     print('testing loss one avg:', avg_loss_one.numpy())
     print('testing loss two avg:', avg_loss_two.numpy())
+
+    visualize_results(tr1, tr2, ts1, ts2)
+    
     
 if __name__ == '__main__':
     main()
+
