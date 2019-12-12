@@ -4,15 +4,11 @@ from preprocess import get_data
 import math
 import matplotlib.pyplot as plt
 
-from sklearn.ensemble import RandomForestRegressor
-
 class ModelThree(tf.keras.Model):
 
     def __init__(self):
 
         super(ModelThree, self).__init__()
-
-        self.rf = RandomForestRegressor(n_estimators=100)
 
 class ModelOne(tf.keras.Model):
 
@@ -208,4 +204,5 @@ def main():
     
 if __name__ == '__main__':
     main()
+
 
